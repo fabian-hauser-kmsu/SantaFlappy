@@ -1,116 +1,104 @@
-# Example file showing a circle moving on screen
 import pygame
 from random import randint
 
-# pygame setup
 pygame.init()
-screen = pygame.display.set_mode((500, 500))
+WIDTH, HEIGHT = 500, 500
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Santa Flappy")
 clock = pygame.time.Clock()
-running = True
-dt = 0
 
-player_pos = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
-player_vel = 0.0
-screen_vel = 200
-screen_pos = 500
+try:
+    santa_img = pygame.image.load("SantaFlappy/Santa.png").convert_alpha()
+    tree_img = pygame.image.load("SantaFlappy/Tree.png").convert_alpha()
+    cloud_img = pygame.image.load("SantaFlappy/Cloud.png").convert_alpha()
+    tundra_img = pygame.image.load("SantaFlappy/tundra.png").convert()
+except:
+    santa_img = pygame.Surface((100, 33)); santa_img.fill("red")
+    tree_img = pygame.Surface((50, 200)); tree_img.fill("green")
+    cloud_img = pygame.Surface((50, 200)); cloud_img.fill("white")
+    tundra_img = pygame.Surface((500, 500)); tundra_img.fill("blue")
+
+santa_img = pygame.transform.scale(santa_img, (60, 25))
+tree_img = pygame.transform.scale(tree_img, (50, 300))
+cloud_img = pygame.transform.scale(cloud_img, (60, 300))
+tundra_img = pygame.transform.scale(tundra_img, (WIDTH, HEIGHT))
+
+player_pos = pygame.Vector2(100, HEIGHT / 2)
+player_vel = 0
+gravity = 800
+jump_strength = -300
+
+scroll_speed = 2
+bg_x1 = 0
+bg_x2 = WIDTH
 
 hindernisse = []
-santa = pygame.image.load("SantaFlappy/Santa.png").convert_alpha()
-tree = pygame.image.load("SantaFlappy/Tree.png").convert_alpha()
-cloud = pygame.image.load("SantaFlappy/Cloud.png").convert_alpha()
-tundra = pygame.image.load("SantaFlappy/tundra.png").convert()
+spawn_dist = 250
+for i in range(3):
+    hindernisse.append([WIDTH + i * spawn_dist, randint(150, 350)])
 
-santa = pygame.transform.scale(santa, (100, 33))
-tree = pygame.transform.scale(tree, (50, 200))
-cloud = pygame.transform.scale(cloud, (50, 200))
-tundra = pygame.transform.scale(tundra, (500, 500))
+def reset_game():
+    return pygame.Vector2(100, HEIGHT / 2), 0, [[WIDTH + i * spawn_dist, randint(150, 350)] for i in range(3)]
 
-background_width = tundra.get_width()
-scroll_speed = 2 # Wie schnell der Hintergrund scrollt
-background_x1 = 0 # Erste Position des Hintergrundbildes
-background_x2 = background_width # Zweite Position des Hintergrundbildes (direkt dahinter)
-
-
-
-offset = 0
-for i in range(4):
-    hindernisse.append((randint(100, 400),offset))
-    offset += 200
+running = True
+game_active = True
+dt = 0
 
 while running:
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                if game_active:
+                    player_vel = jump_strength
+                else:
+                    player_pos, player_vel, hindernisse = reset_game()
+                    game_active = True
 
-    background_x1 -= scroll_speed
-    background_x2 -= scroll_speed
+    if game_active:
+        bg_x1 -= scroll_speed
+        bg_x2 -= scroll_speed
+        if bg_x1 <= -WIDTH: bg_x1 = WIDTH
+        if bg_x2 <= -WIDTH: bg_x2 = WIDTH
 
-    # Wenn das erste Bild komplett aus dem Bildschirm gescrollt ist,
-    # setze es hinter das zweite Bild.
-    if background_x1 <= -background_width:
-        background_x1 = background_width
-
-    # Wenn das zweite Bild komplett aus dem Bildschirm gescrollt ist,
-    # setze es hinter das erste Bild.
-    if background_x2 <= -background_width:
-        background_x2 = background_width
-
-    # --- Zeichnen ---
-    # Zeichne den ersten Teil des Hintergrunds
-    screen.blit(tundra, (background_x1, 0))
-    # Zeichne den zweiten Teil des Hintergrunds (direkt dahinter)
-    screen.blit(tundra, (background_x2, 0))
-
-    angle = -player_vel / 6
-    angle = max(-45, min(45, angle))
-
-    rotated_santa = pygame.transform.rotate(santa, angle)
-
-    screen.blit(rotated_santa, player_pos)
-
-    # Hier zeichnen wir Hindernisse
-
-    for h in hindernisse:
-        gap = h[0]
-        pos = h[1] + screen_pos
-
-        screen.blit(tree, (pos, gap +  50))
-        screen.blit(tree, (pos + 20, gap + 150))
-        screen.blit(tree, (pos - 20, gap + 150))
-
-        screen.blit(cloud, (pos, gap - 250))    
-        screen.blit(cloud, (pos + 10, gap - 300))    
-        screen.blit(cloud, (pos - 10, gap - 300))  
-        screen.blit(cloud, (pos + 20, gap - 400))    
-        screen.blit(cloud, (pos - 20, gap - 400))    
-        
-        if pos < -50:
-            hindernisse.remove(h)
-            new_gap = randint(100, 400)
-            new_pos = hindernisse[-1][1] + 200
-            hindernisse.append((new_gap, new_pos))
-
-
-    screen_pos -= screen_vel * dt
-
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_SPACE]:
-        player_pos.y -= 300 * dt
-        player_vel = -300
-    else:
+        player_vel += gravity * dt
         player_pos.y += player_vel * dt
 
-    player_vel += 500 * dt
+        if player_pos.y < 0 or player_pos.y > HEIGHT:
+            game_active = False
 
+        screen.blit(tundra_img, (bg_x1, 0))
+        screen.blit(tundra_img, (bg_x2, 0))
 
-    # flip() the display to put your work on screen
+        angle = -player_vel * 0.1
+        angle = max(-30, min(30, angle))
+        rotated_santa = pygame.transform.rotate(santa_img, angle)
+        santa_rect = rotated_santa.get_rect(center=player_pos)
+        screen.blit(rotated_santa, santa_rect)
+
+        for h in hindernisse:
+            h[0] -= 200 * dt
+            
+            top_rect = cloud_img.get_rect(midbottom=(h[0], h[1] - 60))
+            bottom_rect = tree_img.get_rect(midtop=(h[0], h[1] + 60))
+
+            screen.blit(cloud_img, top_rect)
+            screen.blit(tree_img, bottom_rect)
+
+            if santa_rect.colliderect(top_rect) or santa_rect.colliderect(bottom_rect):
+                game_active = False
+
+            if h[0] < -50:
+                h[0] = WIDTH + 100
+                h[1] = randint(150, 350)
+
+    else:
+        font = pygame.font.SysFont("Arial", 40)
+        text = font.render("GAME OVER", True, "red")
+        screen.blit(text, (WIDTH//2 - 200, HEIGHT//2))
+
     pygame.display.flip()
-
-    # limits FPS to 60
-    # dt is delta time in seconds since last frame, used for framerate-
-    # independent physics.
     dt = clock.tick(60) / 1000
 
 pygame.quit()
